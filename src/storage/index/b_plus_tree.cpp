@@ -21,7 +21,9 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, BufferPoolManager *buffer_pool_manag
  * Helper function to decide whether current b+tree is empty
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
+auto BPLUSTREE_TYPE::IsEmpty() const -> bool {
+  return root_page_id_ == INVALID_PAGE_ID;
+}
 /*****************************************************************************
  * SEARCH
  *****************************************************************************/
@@ -32,7 +34,19 @@ auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) -> bool {
-  return false;
+  auto leaf_page = FindLeaf(key, SEARCH, transaction);
+  auto *node = reinterpret_cast<LeafPage *>(leaf_page->GetData());
+  ValueType v;
+  bool existed = node->Lookup(key, &v, comparator_);
+
+//  leaf_page->RUnlatch();
+  buffer_pool_manager_->UnpinPage(leaf_page->GetPageId(), false);
+
+  if(!existed) {
+    return false;
+  }
+  result->push_back(v);
+  return true;
 }
 
 /*****************************************************************************
@@ -306,6 +320,82 @@ void BPLUSTREE_TYPE::ToString(BPlusTreePage *page, BufferPoolManager *bpm) const
     }
   }
   bpm->UnpinPage(page->GetPageId(), false);
+}
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::FindLeaf(const KeyType &key, Operation operation, Transaction *transaction, bool leftMost, bool rightMost)
+    -> Page * {
+  assert(operation == Operation::SEARCH ? !(leftMost && rightMost) : transaction != nullptr);
+
+  assert(root_page_id_ != INVALID_PAGE_ID);
+  auto page = buffer_pool_manager_->FetchPage(root_page_id_);
+  auto *node = reinterpret_cast<BPlusTreePage *>(page->GetData());
+//  if (operation == Operation::SEARCH) {
+//    root_page_id_latch_.RUnlock();
+//    page->RLatch();
+//  } else {
+//    page->WLatch();
+//    if (operation == Operation::DELETE && node->GetSize() > 2) {
+//      ReleaseLatchFromQueue(transaction);
+//    }
+//    if (operation == Operation::INSERT && node->IsLeafPage() && node->GetSize() < node->GetMaxSize() - 1) {
+//      ReleaseLatchFromQueue(transaction);
+//    }
+//    if (operation == Operation::INSERT && !node->IsLeafPage() && node->GetSize() < node->GetMaxSize()) {
+//      ReleaseLatchFromQueue(transaction);
+//    }
+//  }
+
+  while (!node->IsLeafPage()) {
+    auto *i_node = reinterpret_cast<InternalPage *>(node);
+
+    page_id_t child_node_page_id;
+    if (leftMost) {
+      child_node_page_id = i_node->ValueAt(0);
+    } else if (rightMost) {
+      child_node_page_id = i_node->ValueAt(i_node->GetSize() - 1);
+    } else {
+      child_node_page_id = i_node->Lookup(key, comparator_);
+    }
+    assert(child_node_page_id > 0);
+
+    auto child_page = buffer_pool_manager_->FetchPage(child_node_page_id);
+    auto child_node = reinterpret_cast<BPlusTreePage *>(child_page->GetData());
+
+//    if (operation == Operation::SEARCH) {
+//      child_page->RLatch();
+//      page->RUnlatch();
+//      buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
+//    } else if (operation == Operation::INSERT) {
+//      child_page->WLatch();
+//      transaction->AddIntoPageSet(page);
+//
+//      // child node is safe, release all locks on ancestors
+//      if (child_node->IsLeafPage() && child_node->GetSize() < child_node->GetMaxSize() - 1) {
+//        ReleaseLatchFromQueue(transaction);
+//      }
+//      if (!child_node->IsLeafPage() && child_node->GetSize() < child_node->GetMaxSize()) {
+//        ReleaseLatchFromQueue(transaction);
+//      }
+//    } else if (operation == Operation::DELETE) {
+//      child_page->WLatch();
+//      transaction->AddIntoPageSet(page);
+//
+//      // child node is safe, release all locks on ancestors
+//      if (child_node->GetSize() > child_node->GetMinSize()) {
+//        ReleaseLatchFromQueue(transaction);
+//      }
+//    }
+
+    page = child_page;
+    node = child_node;
+  }
+
+  return page;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::ReleaseLatchFromQueue(Transaction *transaction) {
+
 }
 
 template class BPlusTree<GenericKey<4>, RID, GenericComparator<4>>;
