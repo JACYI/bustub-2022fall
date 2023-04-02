@@ -42,11 +42,18 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   void SetKeyAt(int index, const KeyType &key);
   auto ValueAt(int index) const -> ValueType;
   void SetValueAt(int index, const ValueType &value);
+  auto KeyIndex(const KeyType &key, const KeyComparator &comparator) const -> int;
   auto ValueIndex(const ValueType &value) const -> int;
 
   auto Lookup(const KeyType &key, const KeyComparator &comparator) const -> ValueType;
   void PopulateNewRoot(const ValueType &old_value, const KeyType &new_key, const ValueType &new_value);
-  auto InsertNodeAfter(const ValueType &old_value, const KeyType &new_key, const ValueType &new_value) -> int;
+  auto InsertAfterNode(const ValueType &old_page_id, const KeyType &new_key, const ValueType &new_value) -> int;
+
+
+  void SplitAndRcv(MappingType *items, int size);
+
+  void SplitAndSnd(BPlusTreeInternalPage *dest);
+
   void Remove(int index);
   auto RemoveAndReturnOnlyChild() -> ValueType;
 

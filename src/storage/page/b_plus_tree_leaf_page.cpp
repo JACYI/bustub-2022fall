@@ -14,6 +14,7 @@
 #include "common/exception.h"
 #include "common/rid.h"
 #include "storage/page/b_plus_tree_leaf_page.h"
+#include "storage/index/b_plus_tree.h"
 
 namespace bustub {
 
@@ -51,9 +52,12 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetNextPageId() const -> page_id_t {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyAt(int index) const -> KeyType {
-  // replace with your own code
-  KeyType key{};
-  return key;
+  return array_[index].first;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::ValueAt(int index) const -> ValueType {
+  return array_[index].second;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -61,15 +65,17 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::SetNextPageId(page_id_t next_page_id) {
   next_page_id_ = next_page_id;
 }
 
-// find the target key which larger than key first
+// Find the target key which larger than key first (in order word, the offset of inserting the key)
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator &comparator) const -> int {
   auto target = std::lower_bound(array_, array_ + GetSize(), key, [&comparator](const auto &pair, auto k) {
     return comparator(pair.first, k) < 0;
   });
+  // 0 represents = or <, 1,2,... represent the distance between lower bound oftarget and array[0]
   return std::distance(array_, target);
 }
 
+// Get key-value pair of index
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index) -> const std::pair<KeyType, ValueType> & {
   return array_[index];
@@ -77,9 +83,23 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index) -> const std::pair<KeyType, 
 
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &value, const KeyComparator &keyComparator) -> int {
+  int key_index = KeyIndex(key, keyComparator);
+  int cur_size = GetSize();
 
+  if(key_index < cur_size){
+    // Move following items behind
+    std::move_backward(array_ + key_index, array_ + cur_size, array_ + GetSize() + 1);
+  }
+
+  array_[key_index].first = key;
+  array_[key_index].second = value;
+  IncreaseSize(1);
+
+  return GetSize();
 }
 
+
+// Get value within key
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, const KeyComparator &keyComparator) const -> bool {
   int target_in_array = KeyIndex(key, keyComparator);
@@ -92,8 +112,41 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, co
 
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const KeyComparator &keyComparator) -> int {
+  int key_index = KeyIndex(key, keyComparator);
+  if(key_index == GetSize() || keyComparator(array_[key_index].first, key) != 0){
+    // Not Found
+    return GetSize();
+  }
+  // Move the array ahead
+  std::move(array_ + key_index + 1, array_ + GetSize(), array_ + key_index);
+  IncreaseSize(-1);
 
+  return GetSize();
 }
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SplitAndSnd(BPlusTreeLeafPage *dest) {
+  if(dest == nullptr) {
+    return ;
+  }
+  int copy_begin_index = GetSize() / 2;
+  int copy_size = GetSize() - copy_begin_index;
+  // No delete but decrease size
+  dest->SplitAndRcv(array_ + copy_begin_index, copy_size);
+  IncreaseSize(-copy_size);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SplitAndRcv(MappingType *items, int size) {
+  // copy from items
+  std::copy(items, items + size, array_ + GetSize());
+  IncreaseSize(size);
+}
+
+//INDEX_TEMPLATE_ARGUMENTS
+//void B_PLUS_TREE_LEAF_PAGE_TYPE::RisenKey(LeafPage *old_node, Transaction &transaction) {
+//
+//}
 
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;

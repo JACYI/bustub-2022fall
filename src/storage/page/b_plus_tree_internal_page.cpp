@@ -61,8 +61,15 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index, const ValueType &valu
 }
 
 INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator &comparator) const -> int {
+  auto itr = std::lower_bound(array_ + 1, array_ + GetSize(), key,
+                              [&comparator](const auto &pair, auto k) {return comparator(pair.first, k) < 0; });
+  return std::distance(array_, itr);
+}
+INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const -> int {
-  auto it = std::find_if(array_, array_ + GetSize(), [&value](const auto &pair) { return pair.second == value; });
+  auto it = std::find_if(array_, array_ + GetSize(),
+                         [&value](const auto &pair) { return pair.second == value; });
   return std::distance(array_, it);
 }
 
@@ -83,6 +90,43 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyCompara
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopulateNewRoot(const ValueType &old_value, const KeyType &new_key, const ValueType &new_value) {
 
+}
+
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertAfterNode(const ValueType &old_page_id, const KeyType &new_key, const ValueType &new_value) -> int {
+  // new value position
+  int offset = ValueIndex(old_page_id) + 1;
+  if(offset < GetSize()){
+    // insert after move elements behind
+    std::copy(array_ + offset, array_ + GetSize(), array_ + offset + 1);
+  }
+  // Insert
+  array_[offset].first = new_key;
+  array_[offset].second = new_value;
+  IncreaseSize(1);
+
+  return GetSize();
+}
+
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SplitAndSnd(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *dest) {
+  if(dest == nullptr) {
+    return ;
+  }
+  int copy_begin_index = (GetSize() + 1) / 2;
+  int copy_size = GetSize() - copy_begin_index;
+  // No delete but decrease size
+  dest->SplitAndRcv(array_ + copy_begin_index, copy_size);
+  IncreaseSize(-copy_size);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SplitAndRcv(std::pair<KeyType, ValueType> *items, int size) {
+  // copy from items
+  std::copy(items, items + size, array_ + GetSize());
+  IncreaseSize(size);
 }
 
 // valuetype for internalNode should be page id_t
