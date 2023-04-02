@@ -86,6 +86,21 @@ class BPlusTree {
 
   void ToString(BPlusTreePage *page, BufferPoolManager *bpm) const;
 
+  void StartNewTree(const KeyType & key, const ValueType & value);
+
+  auto InsertIntoLeaf(const KeyType & key, const ValueType & value, Transaction * transaction = nullptr) -> bool;
+
+  auto SplitLeaf(LeafPage *node) -> LeafPage*;
+
+  auto SplitIntenal(InternalPage *node) -> InternalPage*;
+
+  void MoveHalf(InternalPage *from, InternalPage *to);
+
+  void InsertIntoParent(BPlusTreePage *node, const KeyType &new_key, BPlusTreePage *new_node, Transaction * transaction = nullptr);
+
+  void UpdateHeaderInfo();
+
+
   // member variable
   std::string index_name_;
   page_id_t root_page_id_;
@@ -93,6 +108,7 @@ class BPlusTree {
   KeyComparator comparator_;
   int leaf_max_size_;
   int internal_max_size_;
+  ReaderWriterLatch root_latch_;
 };
 
 }  // namespace bustub

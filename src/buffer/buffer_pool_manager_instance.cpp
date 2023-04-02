@@ -82,7 +82,8 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
   return &pages_[free_frame];
 }
 
-auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {latch_.lock();
+auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
+  latch_.lock();
   Page * target_page;
   // Search for page_id in the buffer pool
   if(page_table_.count(page_id) != 0) {
