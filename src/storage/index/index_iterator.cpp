@@ -15,16 +15,66 @@ INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE::IndexIterator() = default;
 
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE::~IndexIterator() = default;  // NOLINT
+INDEXITERATOR_TYPE::IndexIterator(BufferPoolManager *bpm, Page *page, int index) {
+  buffer_pool_manager_ = bpm;
+  if(page != nullptr) {
+    leaf_page_ = reinterpret_cast<LeafPage *>(page->GetData());
+  } else {
+    leaf_page_ = nullptr;
+  }
+  page_ = page;
+  index_ = index;
+}
 
 INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::IsEnd() -> bool { throw std::runtime_error("unimplemented"); }
+INDEXITERATOR_TYPE::~IndexIterator() {
+  if(page_ != nullptr) {
+    page_->RUnlatch();
+    buffer_pool_manager_->UnpinPage(page_->GetPageId(), false);
+  }
+}
 
 INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::operator*() -> const MappingType & { throw std::runtime_error("unimplemented"); }
+auto INDEXITERATOR_TYPE::IsEnd() -> bool {
+  // end represents rightmost leaf and the last key-value in current leaf
+  return leaf_page_->GetNextPageId() == INVALID_PAGE_ID && index_ == leaf_page_->GetSize();
+}
 
 INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & { throw std::runtime_error("unimplemented"); }
+auto INDEXITERATOR_TYPE::operator*() -> const MappingType & {
+  return leaf_page_->GetItem(index_);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
+  if(index_ == leaf_page_->GetSize() - 1 && leaf_page_->GetNextPageId() != INVALID_PAGE_ID){
+    auto next_page = buffer_pool_manager_->FetchPage(leaf_page_->GetNextPageId());
+
+    next_page->RLatch();
+    page_->RUnlatch();
+    buffer_pool_manager_->UnpinPage(page_->GetPageId(), false);
+
+    page_ = next_page;
+    leaf_page_ = reinterpret_cast<LeafPage *>(page_->GetData());
+    index_ = 0;
+  } else {
+    index_++;
+  }
+  return *this;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto INDEXITERATOR_TYPE::operator==(const IndexIterator<KeyType, ValueType, KeyComparator> &itr) const -> bool {
+  if(page_ == nullptr || itr.page_ == nullptr) {
+    return true;
+  }
+  return itr.page_->GetPageId() == page_->GetPageId() && itr.index_ == index_;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto INDEXITERATOR_TYPE::operator!=(const IndexIterator<KeyType, ValueType, KeyComparator> &itr) const -> bool {
+  return !operator==(itr);
+}
 
 template class IndexIterator<GenericKey<4>, RID, GenericComparator<4>>;
 
