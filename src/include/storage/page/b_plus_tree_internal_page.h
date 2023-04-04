@@ -47,14 +47,15 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
   auto Lookup(const KeyType &key, const KeyComparator &comparator) const -> ValueType;
   void PopulateNewRoot(const ValueType &old_value, const KeyType &new_key, const ValueType &new_value);
+  auto Insert(const KeyType &key, const ValueType &value, KeyComparator &comparator) -> int;
   auto InsertAfterNode(const ValueType &old_page_id, const KeyType &new_key, const ValueType &new_value) -> int;
 
-
   void SplitAndRcv(MappingType *items, int size);
+  void SplitAndSnd(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *dest, int begin);
+  auto GetItem(int index) -> const MappingType &;
 
-  void SplitAndSnd(BPlusTreeInternalPage *dest);
-
-  void Remove(int index);
+  auto RemoveAndDeleteRecord(int index) -> bool;
+  auto RemoveAndDeleteRecord(KeyType &key, KeyComparator &comparator) -> bool;
   auto RemoveAndReturnOnlyChild() -> ValueType;
 
   void MoveAllTo(BPlusTreeInternalPage *recipient, const KeyType &middle_key, BufferPoolManager *buffer_pool_manager);

@@ -60,7 +60,7 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   auto RemoveAndDeleteRecord(const KeyType &key, const KeyComparator &keyComparator) -> int;
 
   // source node deletes items by SplitAndSnd, destination node adds items by SplitAndRcv
-  void SplitAndSnd(BPlusTreeLeafPage *dest);
+  void SplitAndSnd(BPlusTreeLeafPage *dest, int begin);
   void SplitAndRcv(MappingType *items, int size);
 
 

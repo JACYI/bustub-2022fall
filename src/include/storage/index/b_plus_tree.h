@@ -87,16 +87,17 @@ class BPlusTree {
   void ToString(BPlusTreePage *page, BufferPoolManager *bpm) const;
 
   void StartNewTree(const KeyType & key, const ValueType & value);
-
   auto InsertIntoLeaf(const KeyType & key, const ValueType & value, Transaction * transaction = nullptr) -> bool;
-
   auto SplitLeaf(LeafPage *node) -> LeafPage*;
-
   auto SplitIntenal(InternalPage *node) -> InternalPage*;
-
   void MoveHalf(InternalPage *from, InternalPage *to);
-
   void InsertIntoParent(BPlusTreePage *node, const KeyType &new_key, BPlusTreePage *new_node, Transaction * transaction = nullptr);
+
+  auto RemoveFromLeaf(const KeyType &key, Transaction *transaction) -> bool;
+  auto CoalesceAndRedistribute(BPlusTreePage *node) -> bool;
+  void AdjustRoot(BPlusTreePage *page);
+  auto Redistribute(BPlusTreePage *borrower, BPlusTreePage *lenter, InternalPage *parent_node, bool prev, int sibling_idx) -> bool;
+  auto Coalesce(BPlusTreePage *candidator, BPlusTreePage *follower, InternalPage *parent_node, int follower_idx) -> bool;
 
   void UpdateHeaderInfo();
 

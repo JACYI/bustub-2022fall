@@ -92,6 +92,24 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopulateNewRoot(const ValueType &old_value,
 
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(const KeyType &key, const ValueType &value, KeyComparator &comparator) -> int {
+  int insert_index = KeyIndex(key, comparator);
+  if(comparator(array_[insert_index].first, key) == 0){
+    // Duplicate key
+    return GetSize();
+  }
+  int cur_size = GetSize();
+  if(insert_index < cur_size){
+    std::move_backward(array_ + insert_index, array_ + cur_size, array_ + cur_size + 1);
+  }
+
+  array_[insert_index].first = key;
+  array_[insert_index].second = value;
+  IncreaseSize(1);
+
+  return GetSize();
+}
 
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertAfterNode(const ValueType &old_page_id, const KeyType &new_key, const ValueType &new_value) -> int {
@@ -111,24 +129,50 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertAfterNode(const ValueType &old_page_i
 
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SplitAndSnd(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *dest) {
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SplitAndSnd(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *dest, int begin) {
   if(dest == nullptr) {
     return ;
   }
-  int copy_begin_index = (GetSize() + 1) / 2;
-  int copy_size = GetSize() - copy_begin_index;
+  int copy_size = GetSize() - begin;
   // No delete but decrease size
-  dest->SplitAndRcv(array_ + copy_begin_index, copy_size);
+  dest->SplitAndRcv(array_ + begin, copy_size);
   IncreaseSize(-copy_size);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SplitAndRcv(std::pair<KeyType, ValueType> *items, int size) {
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SplitAndRcv(MappingType *items, int size) {
   // copy from items
   std::copy(items, items + size, array_ + GetSize());
   IncreaseSize(size);
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::GetItem(int index) -> const MappingType & {
+  return array_[index];
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndDeleteRecord(int index) -> bool {
+  int size = GetSize();
+  if(index < 0 || index >= size) {
+    return false;
+  }
+  if(index < size - 1) {
+    std::move(array_ + index + 1, array_ + size, array_ + index);
+  }
+  IncreaseSize(-1);
+  return true;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndDeleteRecord(KeyType &key, KeyComparator &comparator) -> bool {
+  int key_index = KeyIndex(key, comparator);
+  if(key_index >= GetSize() || comparator(array_[key_index].first, key) != 0) {
+    return false;
+  }
+
+  return RemoveAndDeleteRecord(key_index);
+}
 // valuetype for internalNode should be page id_t
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;
 template class BPlusTreeInternalPage<GenericKey<8>, page_id_t, GenericComparator<8>>;

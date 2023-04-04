@@ -125,15 +125,18 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_LEAF_PAGE_TYPE::SplitAndSnd(BPlusTreeLeafPage *dest) {
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SplitAndSnd(BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *dest, int begin) {
   if(dest == nullptr) {
     return ;
   }
-  int copy_begin_index = GetSize() / 2;
-  int copy_size = GetSize() - copy_begin_index;
+//  int copy_begin_index = GetSize() / 2;
+  int move_size = GetSize() - begin;
+  if(move_size <= 0) {
+    return ;
+  }
   // No delete but decrease size
-  dest->SplitAndRcv(array_ + copy_begin_index, copy_size);
-  IncreaseSize(-copy_size);
+  dest->SplitAndRcv(array_ + begin, move_size);
+  IncreaseSize(-move_size);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
