@@ -85,6 +85,10 @@ INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &value, const KeyComparator &keyComparator) -> int {
   int key_index = KeyIndex(key, keyComparator);
   int cur_size = GetSize();
+  if(keyComparator(array_[key_index].first, key) == 0) {
+    // if key already exists, give up insert and return
+    return cur_size;
+  }
 
   if(key_index < cur_size){
     // Move following items behind
