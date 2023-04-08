@@ -468,16 +468,16 @@ void BPLUSTREE_TYPE::ReleaseLatchFromQueue(Transaction *transaction) {
   if (transaction == nullptr) {
     return;
   }
-  auto latch_stack_ = transaction->GetPageSet();
-  while (!latch_stack_->empty()) {
-    auto page = latch_stack_->back();
+  auto latch_stack = transaction->GetPageSet();
+  while (!latch_stack->empty()) {
+    auto page = latch_stack->back();
     if (page == nullptr) {
       root_latch_.WUnlock();
     } else {
       page->WUnlatch();
       buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
     }
-    latch_stack_->pop_back();
+    latch_stack->pop_back();
   }
 }
 
@@ -643,8 +643,8 @@ auto BPLUSTREE_TYPE::RemoveFromLeaf(const KeyType &key, Transaction *transaction
 
   if (leaf_node->GetSize() == leaf_node->RemoveAndDeleteRecord(key, comparator_)) {
     // Failed to delete
+    page->WUnlatch();
     ReleaseLatchFromQueue(transaction);
-//    root_latch_.WUnlock();
     return false;
   }
 
