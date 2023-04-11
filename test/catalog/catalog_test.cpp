@@ -341,7 +341,7 @@ TEST(CatalogTest, DISABLED_QueryIndex1) {
 }
 
 // Vanilla index queries by index OID
-TEST(CatalogTest, DISABLED_QueryIndex2) {
+TEST(CatalogTest, QueryIndex2) {
   auto disk_manager = std::make_unique<DiskManager>("catalog_test.db");
   auto bpm = std::make_unique<BufferPoolManagerInstance>(32, disk_manager.get());
   auto catalog = std::make_unique<Catalog>(bpm.get(), nullptr, nullptr);
@@ -530,7 +530,7 @@ TEST(CatalogTest, DISABLED_IndexInteraction0) {
 }
 
 // Should be able to create and interact with an index that is keyed by two INTEGER values
-TEST(CatalogTest, DISABLED_IndexInteraction1) {
+TEST(CatalogTest, IndexInteraction1) {
   auto disk_manager = std::make_unique<DiskManager>("catalog_test.db");
   auto bpm = std::make_unique<BufferPoolManagerInstance>(32, disk_manager.get());
   auto catalog = std::make_unique<Catalog>(bpm.get(), nullptr, nullptr);
