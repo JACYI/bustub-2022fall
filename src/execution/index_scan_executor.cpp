@@ -39,16 +39,16 @@ void IndexScanExecutor::Init() {
 auto IndexScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if(plan_->filter_predicate_ == nullptr) {
     *rid = (*idx_itr_).second;
-    bool isSuccess = tbl_info_->table_->GetTuple(*rid, tuple, txn_, false);
-    if(!isSuccess) {
+    bool is_success = tbl_info_->table_->GetTuple(*rid, tuple, txn_, false);
+    if(!is_success) {
       return false;
     }
     ++idx_itr_;
     return true;
   }
   *rid = *vtr_itr_;
-  bool isSuccess = tbl_info_->table_->GetTuple(*rid, tuple, txn_, false);
-  if(!isSuccess) {
+  bool is_success = tbl_info_->table_->GetTuple(*rid, tuple, txn_, false);
+  if(!is_success) {
     return false;
   }
   ++vtr_itr_;
