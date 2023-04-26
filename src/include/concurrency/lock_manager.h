@@ -304,6 +304,18 @@ class LockManager {
    */
   auto GrantLock(const std::shared_ptr<LockRequest>& lock_request, const std::shared_ptr<LockRequestQueue>& lock_request_queue) -> bool;
 
+  void CheckLockCompatibility(Transaction *txn, const LockMode& lock_mode);
+  void CheckUpgradeCompatibility(Transaction *txn, const LockMode& lock_mode);
+
+  void InsertTableLockRecord(Transaction *txn, const std::shared_ptr<LockRequest>& lock_request);
+  void DeleteTableLockRecord(Transaction *txn, const std::shared_ptr<LockRequest>& lock_request);
+
+  void InsertRowLockRecord(Transaction *txn, const std::shared_ptr<LockRequest>& lock_request);
+  void DeleteRowLockRecord(Transaction *txn, const std::shared_ptr<LockRequest>& lock_request);
+
+  void TransacntionStateUpdate(Transaction *txn, const std::shared_ptr<LockRequest>& lr);
+  void MultilevelLockCheck(Transaction *txn, table_oid_t oid, LockMode lock_mode);
+
  private:
   /** Fall 2022 */
   /** Structure that holds lock requests for a given table oid */
